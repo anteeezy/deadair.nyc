@@ -1,14 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────────
-// SoundCloud Widget API controller — one hidden iframe, two channel shapes:
-//   • 'list' — a hand-built playlist of individual track URLs (we queue them)
-//   • 'set'  — a SoundCloud set/playlist URL (the widget queues it natively)
+// SoundCloud Widget API — one hidden "deck" (iframe + widget) PER channel, so
+// each keeps its own position. Switching channels just pauses one deck and
+// resumes another (no reload → no restart). Volume is remembered and re-applied
+// on every load (SoundCloud resets it otherwise).
 //
-// Legal (official uploads), no hosting. Cross-origin → no visualizer reactivity.
+// Channel shapes:
+//   'list' — a hand-built playlist of track URLs (we queue them, advance, loop)
+//   'set'  — a SoundCloud set URL (native set playback, loop on last)
 //
-// Autoplay note: SoundCloud only starts if play() fires *inside* the click. The
-// iframe is preloaded with the default channel's first track so its first play
-// is a synchronous resume. Once the page is "activated", switching channels via
-// load(auto_play) is allowed.
+// Legal (official uploads), no hosting. Cross-origin → no visualizer reactivity,
+// and no second-accurate cross-listener sync (see notes in the app).
 // ─────────────────────────────────────────────────────────────────────────
 
 interface SCWidget {
@@ -35,14 +36,100 @@ export interface SCEvents {
 	onTrack?: (title: string, artist: string) => void;
 }
 
-class SoundCloud {
-	private widget: SCWidget | null = null;
-	private SC: SCStatic | null = null;
+class Deck {
+	private widget: SCWidget;
+	private E: Record<string, string>;
 	private ready = false;
-	private pending: SCSource | null = null;
-	private loadedUrl = ''; // track url (list) or set url (set) currently in the widget
-	private source: SCSource | null = null;
-	private idx = 0; // position within a 'list' source
+	private pendingPlay = false;
+	private source: SCSource;
+	private idx: number;
+	private vol = 0.8;
+	private report: (title: string, artist: string) => void;
+
+	constructor(
+		SC: SCStatic,
+		iframe: HTMLIFrameElement,
+		source: SCSource,
+		idx: number,
+		report: (title: string, artist: string) => void
+	) {
+		this.source = source;
+		this.idx = idx;
+		this.report = report;
+		this.E = SC.Widget.Events;
+		const widget = SC.Widget(iframe);
+		this.widget = widget;
+
+		widget.bind(this.E.READY, () => {
+			this.ready = true;
+			widget.setVolume(Math.round(this.vol * 100));
+			if (this.pendingPlay) {
+				this.pendingPlay = false;
+				widget.play();
+			}
+		});
+		widget.bind(this.E.PLAY, () => this.announce());
+		widget.bind(this.E.PLAY_PROGRESS, () => this.announce());
+		widget.bind(this.E.FINISH, () => this.onFinish());
+	}
+
+	private announce(): void {
+		this.widget.getCurrentSound((s) => {
+			if (s) this.report(s.title || '', s.user?.username || '');
+		});
+	}
+
+	private onFinish(): void {
+		if (this.source.type === 'list') {
+			this.idx = (this.idx + 1) % this.source.urls.length;
+			this.loadPlay(this.source.urls[this.idx]);
+		} else {
+			const url = this.source.url;
+			this.widget.getCurrentSoundIndex((i) =>
+				this.widget.getSounds((arr) => {
+					if (i >= arr.length - 1) this.loadPlay(url); // loop the set
+				})
+			);
+		}
+	}
+
+	private loadPlay(url: string): void {
+		this.widget.load(url, {
+			auto_play: true,
+			callback: () => {
+				this.widget.setVolume(Math.round(this.vol * 100)); // keep the user's volume
+				this.announce();
+			}
+		});
+	}
+
+	/** resume whatever this deck has loaded (in-gesture → autoplay-safe) */
+	play(): void {
+		if (!this.ready) {
+			this.pendingPlay = true;
+			return;
+		}
+		this.widget.setVolume(Math.round(this.vol * 100));
+		this.widget.play();
+	}
+
+	pause(): void {
+		this.pendingPlay = false;
+		this.widget.pause();
+	}
+
+	setVolume(v: number): void {
+		this.vol = Math.max(0, Math.min(1, v));
+		this.widget.setVolume(Math.round(this.vol * 100));
+	}
+}
+
+class SoundCloud {
+	private SC: SCStatic | null = null;
+	private decks = new Map<string, Deck>();
+	private activeId: string | null = null;
+	private pendingActive: string | null = null;
+	private vol = 0.8;
 	events: SCEvents = {};
 
 	private loadApi(): Promise<SCStatic> {
@@ -56,81 +143,44 @@ class SoundCloud {
 		});
 	}
 
-	/** Host calls this once. The iframe is preloaded with `source` at `idx`. */
-	async attach(iframe: HTMLIFrameElement, source: SCSource, idx: number, loadedUrl: string): Promise<void> {
-		this.source = source;
-		this.idx = idx;
-		this.loadedUrl = loadedUrl;
-		this.SC = await this.loadApi();
-		const widget = this.SC.Widget(iframe);
-		this.widget = widget;
-		const E = this.SC.Widget.Events;
-
-		widget.bind(E.READY, () => {
-			this.ready = true;
-			if (this.pending) {
-				const p = this.pending;
-				this.pending = null;
-				this.tune(p);
-			}
+	/** Host registers one deck per SoundCloud channel (iframe preloaded). */
+	async register(channelId: string, iframe: HTMLIFrameElement, source: SCSource, idx: number): Promise<void> {
+		const SC = await this.loadApi();
+		const deck = new Deck(SC, iframe, source, idx, (t, a) => {
+			if (this.activeId === channelId) this.events.onTrack?.(t, a);
 		});
-		widget.bind(E.PLAY, () => this.announce());
-		widget.bind(E.PLAY_PROGRESS, () => this.announce());
-		widget.bind(E.FINISH, () => this.onFinish());
-	}
-
-	private announce(): void {
-		this.widget?.getCurrentSound((s) => {
-			if (s) this.events.onTrack?.(s.title || '', s.user?.username || '');
-		});
-	}
-
-	private loadPlay(url: string): void {
-		this.loadedUrl = url;
-		this.widget?.load(url, { auto_play: true, callback: () => this.announce() });
-	}
-
-	private onFinish(): void {
-		if (!this.widget || !this.source) return;
-		if (this.source.type === 'list') {
-			this.idx = (this.idx + 1) % this.source.urls.length;
-			this.loadPlay(this.source.urls[this.idx]);
-		} else {
-			// a set auto-advances internally; loop back when the last track ends
-			const setUrl = this.source.url;
-			this.widget.getCurrentSoundIndex((i) =>
-				this.widget?.getSounds((arr) => {
-					if (i >= arr.length - 1) this.loadPlay(setUrl);
-				})
-			);
+		deck.setVolume(this.vol);
+		this.decks.set(channelId, deck);
+		if (this.pendingActive === channelId) {
+			this.pendingActive = null;
+			this.tune(channelId);
 		}
 	}
 
-	/** Tune to a SoundCloud source — call synchronously inside the click. */
-	tune(source: SCSource): void {
-		this.source = source;
-		if (!this.widget || !this.ready) {
-			this.pending = source;
+	/** Tune to a channel — call synchronously inside the click. */
+	tune(channelId: string): void {
+		for (const [id, d] of this.decks) if (id !== channelId) d.pause();
+		this.activeId = channelId;
+		const deck = this.decks.get(channelId);
+		if (!deck) {
+			this.pendingActive = channelId;
 			return;
 		}
-		let target: string;
-		if (source.type === 'list') {
-			if (this.idx >= source.urls.length) this.idx = 0;
-			target = source.urls[this.idx];
-		} else {
-			target = source.url;
-		}
-		if (this.loadedUrl === target) this.widget.play(); // synchronous — autoplay-safe
-		else this.loadPlay(target); // needs prior activation (default channel handles that)
+		deck.play();
 	}
 
 	pause(): void {
-		this.pending = null;
-		this.widget?.pause();
+		if (this.activeId) this.decks.get(this.activeId)?.pause();
+	}
+
+	pauseAll(): void {
+		this.pendingActive = null;
+		for (const d of this.decks.values()) d.pause();
 	}
 
 	setVolume(v: number): void {
-		this.widget?.setVolume(Math.round(Math.max(0, Math.min(1, v)) * 100));
+		this.vol = Math.max(0, Math.min(1, v));
+		for (const d of this.decks.values()) d.setVolume(this.vol);
 	}
 }
 

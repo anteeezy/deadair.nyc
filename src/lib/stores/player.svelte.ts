@@ -8,12 +8,8 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { engine } from '$lib/audio/engine';
-import { sc, type SCSource } from '$lib/audio/soundcloud';
+import { sc } from '$lib/audio/soundcloud';
 import { channels, type Track, type Channel } from '$lib/data/tracks';
-
-function scSource(ch: Channel): SCSource {
-	return ch.scTracks?.length ? { type: 'list', urls: ch.scTracks } : { type: 'set', url: ch.scUrl ?? '' };
-}
 
 export type Status = 'off' | 'idle' | 'playing' | 'paused' | 'offair';
 
@@ -111,8 +107,10 @@ class Player {
 		if (ch.live && ch.kind === 'soundcloud') {
 			engine.stopTrack();
 			engine.stopStatic();
+			this.scTitle = '';
+			this.scArtist = '';
 			sc.setVolume(this.volume);
-			sc.tune(scSource(ch));
+			sc.tune(ch.id);
 			this.status = 'playing';
 			this.time = 0;
 			this.duration = 0;
@@ -129,6 +127,7 @@ class Player {
 		if (!ch.live) {
 			engine.stopTrack();
 			engine.stopStatic();
+			sc.pauseAll();
 			this.status = 'offair';
 			this.time = 0;
 			this.duration = 0;
@@ -137,7 +136,7 @@ class Player {
 		// pure-static channel: just the (always-on) dead-air noise
 		if (ch.kind === 'static') {
 			engine.stopTrack();
-			sc.pause();
+			sc.pauseAll();
 			engine.startStatic();
 			this.status = 'playing';
 			this.time = 0;
@@ -148,8 +147,10 @@ class Player {
 		if (ch.kind === 'soundcloud') {
 			engine.stopTrack();
 			engine.stopStatic();
+			this.scTitle = '';
+			this.scArtist = '';
 			sc.setVolume(this.volume);
-			sc.tune(scSource(ch));
+			sc.tune(ch.id);
 			this.status = 'playing';
 			this.time = 0;
 			this.duration = 0;
@@ -220,7 +221,7 @@ class Player {
 	stop(): void {
 		engine.stopTrack();
 		engine.stopStatic();
-		sc.pause();
+		sc.pauseAll();
 		this.status = 'idle';
 		this.time = 0;
 		this.duration = 0;
