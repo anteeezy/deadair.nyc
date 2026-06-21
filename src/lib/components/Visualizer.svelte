@@ -106,20 +106,26 @@
 			g.fillStyle = 'rgba(4,4,6,0.24)';
 			g.fillRect(0, 0, W, H);
 
+			// a slow, organic swell (two out-of-phase LFOs) so the whole shape
+			// grows and recedes — for ambient this *is* the dynamics; for real
+			// audio it's overridden by the bass envelope below.
+			const swell = 0.5 + 0.5 * (0.62 * Math.sin(phase * 0.5) + 0.38 * Math.sin(phase * 0.17 + 1.3));
+
 			// ease the spectrum toward the music (slow = calm, not jittery)
 			for (let i = 0; i < N; i++) {
 				const target = ambient
-					? 0.3 + 0.24 * (Math.sin(i * 0.27 + phase * 1.6) * 0.5 + 0.5) * (0.6 + 0.4 * Math.sin(phase * 0.5))
+					? 0.4 * (0.5 + 0.5 * Math.sin(i * 0.3 + phase * 1.4))
 					: freq[Math.floor((i / N) ** 1.4 * freq.length * 0.6)] / 255;
 				spec[i] += (target - spec[i]) * 0.06;
 			}
 			let bass = 0;
 			for (let i = 0; i < 6; i++) bass += freq[i];
-			bassEnv += ((ambient ? 0.45 : bass / (6 * 255)) - bassEnv) * 0.06;
+			bassEnv += ((ambient ? swell : bass / (6 * 255)) - bassEnv) * 0.05;
 			phase += 0.014;
 
 			const mid = H * 0.54;
-			const ampMax = H * (0.16 + bassEnv * 0.1);
+			// wider range so the breathing is actually visible
+			const ampMax = H * (0.1 + bassEnv * 0.22);
 			const amp = (i: number) => {
 				const drift = Math.sin(i * 0.5 + phase) * 0.04;
 				return Math.min(1, Math.max(0, spec[i] + drift)) * ampMax;

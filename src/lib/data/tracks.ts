@@ -29,12 +29,46 @@ export interface Channel {
 	/** false = off air / coming soon (silent snow, no program) */
 	live: boolean;
 	kind?: 'tracks' | 'static' | 'soundcloud';
-	/** SoundCloud set/playlist URL (kind: 'soundcloud') */
+	/** a list of individual SoundCloud track URLs (kind: 'soundcloud') */
+	scTracks?: string[];
+	/** a single SoundCloud set/playlist URL (kind: 'soundcloud') */
 	scUrl?: string;
 	tracks: Track[];
 }
 
+// a hand-picked shoegaze playlist, streamed from SoundCloud (one track at a time)
+const shoegazeSet: string[] = [
+	'https://soundcloud.com/soundsbetterwithreverb/fleeting-joys-kiss-a-girl-in',
+	'https://soundcloud.com/user-321750480/ozean-scenic',
+	'https://soundcloud.com/miniatures/what-you-want-1',
+	'https://soundcloud.com/bunni666/forgotten-fossilized-archaic',
+	'https://soundcloud.com/savage-sister/huge-moves-master-prep',
+	'https://soundcloud.com/unrealonline/blue-garden',
+	'https://soundcloud.com/blankenberge/everything',
+	'https://soundcloud.com/blankenberge/no-sense',
+	'https://soundcloud.com/rew-fusca-music/outlanderr',
+	'https://soundcloud.com/topographies/pink-thoughts',
+	'https://soundcloud.com/daniel_romero-1/lost-in-your-gaze-1',
+	'https://soundcloud.com/bloodhoundsonmytrail/shes-in-my-plans',
+	'https://soundcloud.com/whirr-official/sandy',
+	'https://soundcloud.com/saintmarie-records/sway-fall',
+	'https://soundcloud.com/crybabybaby/repetitive-days',
+	'https://soundcloud.com/lifeonvenusband/may',
+	'https://soundcloud.com/tearsrunrings/tears-run-rings-mind-the-wires',
+	'https://soundcloud.com/user-315472317/bumblebee',
+	'https://soundcloud.com/gleemer/lily'
+];
+
 export const channels: Channel[] = [
+	{
+		id: 'shoegaze',
+		name: 'shoegaze',
+		tagline: 'wall of sound · all night',
+		live: true,
+		kind: 'soundcloud',
+		scTracks: shoegazeSet,
+		tracks: []
+	},
 	{
 		id: 'aroundthefur',
 		name: 'around the fur',

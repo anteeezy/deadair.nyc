@@ -40,7 +40,9 @@
 		<footer class="foot">
 			<span>deadair.nyc</span>
 			<span class="dim">— best viewed at 1024×768, lights off —</span>
-			<span>since 1997</span>
+			<a class="by" href="https://anthonyderose.nyc" target="_blank" rel="noopener noreferrer"
+				>by anthony ↗</a
+			>
 		</footer>
 	</div>
 
@@ -170,6 +172,15 @@
 	.foot .dim {
 		color: var(--text-faint);
 		font-style: italic;
+	}
+	.foot .by {
+		color: var(--text-dim);
+		text-decoration: none;
+		transition: color 0.15s;
+	}
+	.foot .by:hover {
+		color: var(--bone);
+		text-decoration: none;
 	}
 
 	@media (max-width: 760px) {

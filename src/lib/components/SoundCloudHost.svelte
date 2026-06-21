@@ -4,10 +4,16 @@
 	import { channels } from '$lib/data/tracks';
 
 	let iframe = $state<HTMLIFrameElement>();
-	const scChannel = channels.find((c) => c.kind === 'soundcloud');
+
+	const scChannel = channels.find((c) => c.kind === 'soundcloud' && c.scTracks?.length);
+	const urls = scChannel?.scTracks ?? [];
+
+	// pick a wall-clock-ish starting track so different load times join at
+	// different points (rough "live" feel). ~3.5-min assumed avg per track.
+	const startIdx = urls.length ? Math.floor((Date.now() / (3.5 * 60 * 1000)) % urls.length) : 0;
 
 	const params = new URLSearchParams({
-		url: scChannel?.scUrl ?? '',
+		url: urls[startIdx] ?? '',
 		auto_play: 'false',
 		buying: 'false',
 		sharing: 'false',
@@ -23,11 +29,13 @@
 	const src = `https://w.soundcloud.com/player/?${params.toString()}`;
 
 	onMount(() => {
-		if (scChannel && iframe) sc.attach(iframe);
+		if (urls.length && iframe) {
+			sc.attach(iframe, { type: 'list', urls }, startIdx, urls[startIdx]);
+		}
 	});
 </script>
 
-{#if scChannel}
+{#if urls.length}
 	<iframe
 		bind:this={iframe}
 		title="soundcloud stream"

@@ -28,7 +28,6 @@
 				<div class="rows">
 					<span class="online"><i></i> online now</span>
 					<span>New York, NY</span>
-					<span>est. 1997</span>
 				</div>
 			</div>
 		</div>

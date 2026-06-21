@@ -8,8 +8,12 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { engine } from '$lib/audio/engine';
-import { sc } from '$lib/audio/soundcloud';
+import { sc, type SCSource } from '$lib/audio/soundcloud';
 import { channels, type Track, type Channel } from '$lib/data/tracks';
+
+function scSource(ch: Channel): SCSource {
+	return ch.scTracks?.length ? { type: 'list', urls: ch.scTracks } : { type: 'set', url: ch.scUrl ?? '' };
+}
 
 export type Status = 'off' | 'idle' | 'playing' | 'paused' | 'offair';
 
@@ -108,7 +112,7 @@ class Player {
 			engine.stopTrack();
 			engine.stopStatic();
 			sc.setVolume(this.volume);
-			sc.joinLive();
+			sc.tune(scSource(ch));
 			this.status = 'playing';
 			this.time = 0;
 			this.duration = 0;
@@ -140,12 +144,12 @@ class Player {
 			this.duration = 0;
 			return;
 		}
-		// soundcloud channel: stream the official set, joined at the live position
+		// soundcloud channel: stream the playlist/set
 		if (ch.kind === 'soundcloud') {
 			engine.stopTrack();
 			engine.stopStatic();
 			sc.setVolume(this.volume);
-			sc.joinLive();
+			sc.tune(scSource(ch));
 			this.status = 'playing';
 			this.time = 0;
 			this.duration = 0;
