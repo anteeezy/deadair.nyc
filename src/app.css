@@ -1,0 +1,158 @@
+/* deadair.nyc — design tokens + base
+   2005 goth MySpace / Windows Media Player. blood red on black. cluttered, moody. */
+
+:root {
+	/* surfaces — deep neutral black, faintest cool cast (no warmth) */
+	--bg: #050506;
+	--bg-2: #08080a;
+	--ink: #0c0c0f;
+	--panel: #111114;
+	--panel-2: #17181c;
+	--screen: #040405;
+
+	/* WMP brushed-dark chrome — cool neutral grey */
+	--chrome-hi: #36363d;
+	--chrome: #1f1f25;
+	--chrome-lo: #0b0b0e;
+
+	/* lines / bevels */
+	--line: rgba(255, 255, 255, 0.06);
+	--line-strong: rgba(255, 255, 255, 0.12);
+	--bevel-light: rgba(255, 255, 255, 0.09);
+	--bevel-dark: rgba(0, 0, 0, 0.75);
+
+	/* Deftones monochrome — black/white/silver, cold haze. no color. */
+	--blood: #9a989d; /* silver-grey (primary accent / chrome) */
+	--blood-bright: #ededf0; /* near-white — glows, live, highlights */
+	--blood-dim: #2b2b30; /* cold dark grey — borders, shadows */
+	--blood-glow: rgba(232, 234, 240, 0.32);
+
+	/* the faintest cold-blue cast, for fog only */
+	--violet: #6f7a8c;
+	--violet-glow: rgba(120, 134, 156, 0.26);
+
+	/* legacy aliases (old player components) → near-white */
+	--phosphor: #ededf0;
+	--phosphor-dim: #4a4a52;
+	--air: #ededf0;
+	--air-glow: rgba(232, 234, 240, 0.32);
+
+	/* text — bone / ash, nothing pure white except highlights */
+	--text: #bbbab8;
+	--text-dim: #76767a;
+	--text-faint: #404045;
+	--bone: #dad9d7;
+
+	/* type — band-flyer condensed + typewriter zine, no blackletter */
+	--font-goth: 'Anton', 'Oswald', 'Arial Narrow', sans-serif; /* heavy merch condensed */
+	--font-goth2: 'Special Elite', 'Courier New', monospace; /* xerox typewriter */
+	--font-stamp: 'Special Elite', 'Courier New', monospace;
+	--font-display: 'Oswald', 'Arial Narrow', sans-serif;
+	--font-mono: 'VT323', 'Courier New', monospace;
+	--font-body: Tahoma, Verdana, Geneva, sans-serif; /* the MySpace stack */
+
+	--flicker: 7s;
+	color-scheme: dark;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	min-height: 100%;
+}
+
+body {
+	background-color: #040405;
+	/* very faint dusty haze bleeding from the top — mostly black */
+	background-image:
+		radial-gradient(130% 70% at 50% -8%, rgba(150, 70, 120, 0.13), rgba(0, 0, 0, 0) 50%),
+		radial-gradient(80% 60% at 82% 115%, rgba(96, 80, 150, 0.08), rgba(0, 0, 0, 0) 55%);
+	color: var(--text);
+	font-family: var(--font-body);
+	font-size: 13px;
+	line-height: 1.5;
+	text-rendering: optimizeLegibility;
+	/* custom cursor — small washed-red dot */
+	cursor:
+		url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cg fill='none' stroke='%23e07ab0' stroke-width='1.5'%3E%3Cpath d='M10 2v6M10 12v6M2 10h6M12 10h6'/%3E%3C/g%3E%3Ccircle cx='10' cy='10' r='1.5' fill='%23e07ab0'/%3E%3C/svg%3E") 10 10,
+		crosshair;
+}
+
+a {
+	color: var(--blood-bright);
+	text-decoration: none;
+}
+a:hover {
+	color: #fff;
+	text-decoration: underline;
+}
+
+::selection {
+	background: var(--blood);
+	color: #000;
+}
+
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+::-webkit-scrollbar-thumb {
+	background: linear-gradient(180deg, var(--blood-dim), #141418);
+	border: 1px solid #000;
+}
+::-webkit-scrollbar-track {
+	background: #000;
+}
+
+button {
+	font-family: inherit;
+	color: inherit;
+	background: none;
+	border: none;
+	cursor: inherit;
+}
+
+/* recessed CRT-ish panel */
+.recessed {
+	background: var(--screen);
+	box-shadow:
+		inset 1px 1px 0 var(--bevel-dark),
+		inset -1px -1px 0 var(--bevel-light);
+}
+
+/* a beveled "Web 2.0" panel — the MySpace module box */
+.module {
+	background: linear-gradient(180deg, var(--panel-2), var(--ink));
+	border: 1px solid #000;
+	box-shadow:
+		inset 0 1px 0 var(--bevel-light),
+		0 2px 8px rgba(0, 0, 0, 0.7);
+}
+.module > .bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 3px 8px;
+	font-family: var(--font-display);
+	font-weight: 600;
+	font-size: 11px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: #fff;
+	background: linear-gradient(180deg, #3b3b42, #1d1d22 55%, #141418);
+	border-bottom: 1px solid #000;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	* {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+	}
+}
